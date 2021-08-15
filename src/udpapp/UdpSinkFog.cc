@@ -172,21 +172,18 @@ void UdpSinkFog::processPacket(Packet *pk)
         powerIdle.rawBytes[i] = data->getByte(i+2*sizeof(double)); //data[i+2*sizeof(double)];
         powerTransmission.rawBytes[i] = data->getByte(i+3*sizeof(double)); //data[i+3*sizeof(double)];
         powerProcessing.rawBytes[i] = data->getByte(i+4*sizeof(double)); //data[i+4*sizeof(double)];
-        cpuRequired.rawBytes[i] = data->getByte(i+5*sizeof(double)); //data[i+5*sizeof(double)];
-        ramRequired.rawBytes[i] = data->getByte(i+6*sizeof(double)); //data[i+6*sizeof(double)];
-        storageRequired.rawBytes[i] = data->getByte(i+7*sizeof(double)); //data[i+7*sizeof(double)];
-        dataSize.rawBytes[i] = data->getByte(i+8*sizeof(double)); //data[i+8*sizeof(double)];
-        requestSize.rawBytes[i] = data->getByte(i+9*sizeof(double)); //data[i+9*sizeof(double)];
-        responseSize.rawBytes[i] = data->getByte(i+10*sizeof(double)); //data[i+10*sizeof(double)];
-        serviceDeadline.rawBytes[i] = data->getByte(i+11*sizeof(double)); //data[i+11*sizeof(double)];
+        dataSize.rawBytes[i] = data->getByte(i+5*sizeof(double)); //data[i+8*sizeof(double)];
+        requestSize.rawBytes[i] = data->getByte(i+6*sizeof(double)); //data[i+9*sizeof(double)];
+        responseSize.rawBytes[i] = data->getByte(i+7*sizeof(double)); //data[i+10*sizeof(double)];
+        serviceDeadline.rawBytes[i] = data->getByte(i+8*sizeof(double)); //data[i+11*sizeof(double)];
     }
     auto l3Addresses = pk->getTag<L3AddressInd>();
     //auto ports = pk->getTag<L4PortInd>();
     L3Address srcAddr = l3Addresses->getSrcAddress();
     //L3Address destAddr = l3Addresses->getDestAddress();
-    gaOptimizer->registFogServiceInfo(srcAddr, processingCapacity.doubleValue, linkCapacity.doubleValue, powerIdle.doubleValue, powerTransmission.doubleValue, powerProcessing.doubleValue, cpuRequired.doubleValue, ramRequired.doubleValue, storageRequired.doubleValue, dataSize.doubleValue, requestSize.doubleValue, responseSize.doubleValue, serviceDeadline.doubleValue);
+    gaOptimizer->registFogServiceInfo(srcAddr, processingCapacity.doubleValue, linkCapacity.doubleValue, powerIdle.doubleValue, powerTransmission.doubleValue, powerProcessing.doubleValue, dataSize.doubleValue, requestSize.doubleValue, responseSize.doubleValue, serviceDeadline.doubleValue);
 
-    EV_INFO << "UdpSinkFog::processPacket(Packet): Received packet from " << srcAddr << ", processingCapacity = " << processingCapacity.doubleValue << ", linkCapacity = " << linkCapacity.doubleValue << ", powerIdle = " << powerIdle.doubleValue << ", powerTransmission = " << powerTransmission.doubleValue << ", cpuRequired = " << cpuRequired.doubleValue << ", ramRequired = " << ramRequired.doubleValue << ", storageRequired = " << storageRequired.doubleValue << ", dataSize = " << dataSize.doubleValue << ", requestSize = " << requestSize.doubleValue << ", responseSize = " << responseSize.doubleValue << ", serviceDeadline = " << serviceDeadline.doubleValue << endl;
+    EV_INFO << "UdpSinkFog::processPacket(Packet): Received packet from " << srcAddr << ", processingCapacity = " << processingCapacity.doubleValue << ", linkCapacity = " << linkCapacity.doubleValue << ", powerIdle = " << powerIdle.doubleValue << ", powerTransmission = " << powerTransmission.doubleValue << ", dataSize = " << dataSize.doubleValue << ", requestSize = " << requestSize.doubleValue << ", responseSize = " << responseSize.doubleValue << ", serviceDeadline = " << serviceDeadline.doubleValue << endl;
 
     delete pk;
 

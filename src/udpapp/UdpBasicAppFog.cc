@@ -74,10 +74,6 @@ void UdpBasicAppFog::initialize(int stage)
         powerProcessing.doubleValue = par("powerProcessing"); // maximum power consumption during processing in watts
 
         //Service Info
-        cpuRequired.doubleValue = par("cpuRequired");
-        ramRequired.doubleValue = par("ramRequired");
-        storageRequired.doubleValue = par("storageRequired");
-
         dataSize.doubleValue = par("dataSize"); // service size to calculate the processing time
         requestSize.doubleValue = par("requestSize"); // size of service request to calculate the communication time
         responseSize.doubleValue = par("responseSize"); // size of service response to calculate the communication time
@@ -170,15 +166,12 @@ void UdpBasicAppFog::sendPacket()
         rawBytes[i+2*sizeof(double)] = powerIdle.rawBytes[i];
         rawBytes[i+3*sizeof(double)] = powerTransmission.rawBytes[i];
         rawBytes[i+4*sizeof(double)] = powerProcessing.rawBytes[i];
-        rawBytes[i+5*sizeof(double)] = cpuRequired.rawBytes[i];
-        rawBytes[i+6*sizeof(double)] = ramRequired.rawBytes[i];
-        rawBytes[i+7*sizeof(double)] = storageRequired.rawBytes[i];
-        rawBytes[i+8*sizeof(double)] = dataSize.rawBytes[i];
-        rawBytes[i+9*sizeof(double)] = requestSize.rawBytes[i];
-        rawBytes[i+10*sizeof(double)] = responseSize.rawBytes[i];
-        rawBytes[i+11*sizeof(double)] = serviceDeadline.rawBytes[i];
+        rawBytes[i+5*sizeof(double)] = dataSize.rawBytes[i];
+        rawBytes[i+6*sizeof(double)] = requestSize.rawBytes[i];
+        rawBytes[i+7*sizeof(double)] = responseSize.rawBytes[i];
+        rawBytes[i+8*sizeof(double)] = serviceDeadline.rawBytes[i];
     }
-    EV_INFO << "UdpBasicAppFog::sendPacket(): Data presentation to be sent:" << " processingCapacity = " << processingCapacity.doubleValue << ", linkCapacity = " << linkCapacity.doubleValue << ", powerIdle = " << powerIdle.doubleValue << ", powerTransmission = " << powerTransmission.doubleValue << ", cpuRequired = " << cpuRequired.doubleValue << ", ramRequired = " << ramRequired.doubleValue << ", storageRequired = " << storageRequired.doubleValue << ", dataSize = " << dataSize.doubleValue << ", requestSize = " << requestSize.doubleValue << ", responseSize = " << responseSize.doubleValue << ", serviceDeadline = " << serviceDeadline.doubleValue << endl;
+    EV_INFO << "UdpBasicAppFog::sendPacket(): Data presentation to be sent:" << " processingCapacity = " << processingCapacity.doubleValue << ", linkCapacity = " << linkCapacity.doubleValue << ", powerIdle = " << powerIdle.doubleValue << ", powerTransmission = " << powerTransmission.doubleValue << ", dataSize = " << dataSize.doubleValue << ", requestSize = " << requestSize.doubleValue << ", responseSize = " << responseSize.doubleValue << ", serviceDeadline = " << serviceDeadline.doubleValue << endl;
 
     //Extra End
     std::ostringstream str;
@@ -210,9 +203,6 @@ void UdpBasicAppFog::sendPacket()
     packet->setPowerIdle(powerIdle);
     packet->setPowerTransmission(powerTransmission);
     packet->setPowerProcessing(powerProcessing);
-    packet->setCpuRequired(cpuRequired);
-    packet->setRamRequired(ramRequired);
-    packet->setStorageRequired(storageRequired);
     packet->setDataSize(dataSize);
     packet->setRequestSize(requestSize);
     packet->setResponseSize(responseSize);

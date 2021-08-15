@@ -84,10 +84,6 @@ simple UdpBasicAppFog like IApp
     	double powerProcessing; // maximum power consumption during processing in watts
 
     	//Service Info
-    	double cpuRequired;
-    	double ramRequired;
-    	double storageRequired;
-
     	double dataSize; // service size to calculate the processing time
     	double requestSize; // size of service request to calculate the communication time
     	double responseSize; // size of service response to calculate the communication time

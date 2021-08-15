@@ -22,7 +22,8 @@
 #include "inet/common/INETDefs.h"
 #include "src/statistics/Statistics.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
-
+//#include "inet/clock/contract/ClockEvent.h"
+//#include "inet/common/clock/ClockUserModuleMixin.h"
 
 
 namespace fogfn {
@@ -46,6 +47,10 @@ class GA : public cSimpleModule
     enum RouletteWheel{elitism = 0, crossover, mutation};
 
     Statistics *statistics;
+    //ClockEvent *selfMsg;
+    cMessage *selfMsg;
+    simtime_t startTime;
+    //clocktime_t startTime;
 
     struct FogNode{
         cModule *host;
@@ -77,10 +82,6 @@ class GA : public cSimpleModule
 
 
     struct Service{
-        double cpuRequired;
-        double ramRequired;
-        double storageRequired;
-
         double dataSize; // service size to calculate the processing time
         double requestSize; // size of service request to calculate the communication time
         double responseSize; // size of service response to calculate the communication time
@@ -89,10 +90,7 @@ class GA : public cSimpleModule
 
 
         Service()
-            : cpuRequired(0)
-            , ramRequired(0)
-            , storageRequired(0)
-            , dataSize(0)
+            : dataSize(0)
             , requestSize(0)
             , responseSize(0)
             , serviceDeadline(0)
@@ -138,7 +136,10 @@ public:
         , elitismRate(0)
         , crossoverProbability(0)
         , mutationRate(0)
-        , statistics (nullptr)
+        , statistics(nullptr)
+        , selfMsg(nullptr)
+        , startTime(SIMTIME_ZERO)
+        //, startTime(CLOCKTIME_ZERO)
         {};
 
     ~GA();
@@ -155,11 +156,13 @@ protected:
     virtual Chromosome mutationOperation(Chromosome chromosome1);
     virtual enum RouletteWheel rouletteWheel(double elitismRate, double crossoverProbability, double mutationRate);
     virtual void newGeneration(double elitismRate, double crossoverProbability, double mutationRate);
+    virtual Individualt executeGa(double elitismRate, double crossoverProbability, double mutationRate);
 
 public:
     virtual void registFogNodesInfo(cModule *host, L3Address ipAddress, int fogIndex);
-    virtual void registFogServiceInfo(L3Address srcAddr, double processingCapacity, double linkCapacity, double powerIdle, double powerTransmission, double powerProcessing, double cpuRequired, double ramRequired, double storageRequired, double dataSize, double requestSize, double responseSize, double serviceDeadline);
-    virtual Individualt execute(double elitismRate, double crossoverProbability, double mutationRate);
+    virtual void registFogServiceInfo(L3Address srcAddr, double processingCapacity, double linkCapacity, double powerIdle, double powerTransmission, double powerProcessing, double dataSize, double requestSize, double responseSize, double serviceDeadline);
+    virtual void handleMessage(cMessage *msg);
+
 
 };
 

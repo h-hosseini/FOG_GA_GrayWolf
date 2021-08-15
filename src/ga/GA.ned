@@ -21,6 +21,7 @@ simple GA
         @class(fogfn::GA);
         @display("i=showcases/marsrover");
         @labels(optimizer);
+        double startTime @unit(s) = default(5s);
         //Network parameter
         int numberOfFogNodes = default(5);
     	//Population parameters

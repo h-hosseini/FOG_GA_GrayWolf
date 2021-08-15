@@ -20,18 +20,17 @@
 #include <algorithm>    // std::sort
 #include <math.h>       // ceil
 
-
 namespace fogfn {
 using namespace inet;
 
 Define_Module(GA);
 
-    //if ((NodeCounter_Upward[Version]<NodesNumber)&&(!IsDODAGFormed_Upward)) NodeStateLast->DIO.Received++;  //if simulation is not end ...
-
 void GA::initialize(int stage)
 {
     if (stage == INITSTAGE_LOCAL){
         //statistics = check_and_cast<statistics *>(getSimulation()->getSystemModule()->getSubmodule("statistics"));
+        //selfMsg = new ClockEvent("sendTimer");
+        selfMsg = new cMessage("sendTimer");
 
         numberOfFogNodes = par("numberOfFogNodes");
         numberOfIterations = par("numberOfIterations");
@@ -65,6 +64,10 @@ void GA::initialize(int stage)
 
         WATCH_VECTOR(fogNodes);
         WATCH_VECTOR(services);
+
+        startTime = par("startTime");
+        //scheduleClockEventAt(startTime, selfMsg);
+        scheduleAt(startTime, selfMsg);
     }
 
 }
@@ -75,7 +78,7 @@ void GA::registFogNodesInfo(cModule *host, L3Address ipAddress, int fogIndex){
     EV_INFO << "GA::registFogNodesInfo(): Fog node name: " << host->getFullName() << ", Fog node #: " << fogIndex << ", Ip address: " << ipAddress << " is registered." << endl;
 }
 
-void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, double linkCapacity, double powerIdle, double powerTransmission, double powerProcessing, double cpuRequired, double ramRequired, double storageRequired, double dataSize, double requestSize, double responseSize, double serviceDeadline){
+void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, double linkCapacity, double powerIdle, double powerTransmission, double powerProcessing, double dataSize, double requestSize, double responseSize, double serviceDeadline){
     int fogIndex = -1;
     for (int i=0; i<numberOfFogNodes; i++){
         if (fogNodes.at(i).ipAddress == srcAddr){
@@ -84,15 +87,13 @@ void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, doub
     }
     if (fogIndex == -1){
         error("GA::registFogServiceInfo(): The Fog node has not been registered before!");
+        //throw cRuntimeError("GA::registFogServiceInfo(): The Fog node has not been registered before!");
     }
     fogNodes.at(fogIndex).processingCapacity = processingCapacity;
     fogNodes.at(fogIndex).linkCapacity = linkCapacity;
     fogNodes.at(fogIndex).powerIdle = powerIdle;
     fogNodes.at(fogIndex).powerTransmission = powerTransmission;
     fogNodes.at(fogIndex).powerProcessing = powerProcessing;
-    services.at(fogIndex).cpuRequired = cpuRequired;
-    services.at(fogIndex).ramRequired = ramRequired;
-    services.at(fogIndex).storageRequired = storageRequired;
     services.at(fogIndex).dataSize = dataSize;
     services.at(fogIndex).requestSize = requestSize;
     services.at(fogIndex).responseSize = responseSize;
@@ -271,7 +272,7 @@ void GA::newGeneration(double elitismRate, double crossoverProbability, double m
     }
 }
 
-GA::Individualt GA::execute(double elitismRate, double crossoverProbability, double mutationRate){
+GA::Individualt GA::executeGa(double elitismRate, double crossoverProbability, double mutationRate){
     Individualt bestIndividual = population.at(0);
     generationOfInitialPopulation();
     for(int i=0; i<numberOfIterations; i++){
@@ -285,19 +286,22 @@ GA::Individualt GA::execute(double elitismRate, double crossoverProbability, dou
     return bestIndividual;
 }
 
+void GA::handleMessage(cMessage *msg)
+{
+    if (msg->isSelfMessage()) {
+        ASSERT(msg == selfMsg);
+        executeGa(elitismRate, crossoverProbability, mutationRate);
+    }
+}
+
 GA::~GA()
 {
-    //cancelAndDelete(globalRepairTimer);
-
-
+    cancelAndDelete(selfMsg);
 }
 
 std::ostream& operator<<(std::ostream& os, const struct GA::Service& service)
 {
-     os << "{cpuRequired: " << service.cpuRequired;
-     os << ", ramRequired: " << service.ramRequired;
-     os << ", storageRequired: " << service.storageRequired;
-     os << ", dataSize: " << service.dataSize;
+     os << "{dataSize: " << service.dataSize;
      os << ", requestSize: " << service.requestSize;
      os << ", responseSize: " << service.responseSize;
      os << ", serviceDeadline: " << service.serviceDeadline << "}";

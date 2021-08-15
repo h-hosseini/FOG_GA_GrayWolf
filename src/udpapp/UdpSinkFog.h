@@ -64,10 +64,6 @@ class INET_API UdpSinkFog : public ApplicationBase, public UdpSocket::ICallback
     ChunkData powerProcessing; // maximum power consumption during processing in watts
 
     //Service Info
-    ChunkData cpuRequired;
-    ChunkData ramRequired;
-    ChunkData storageRequired;
-
     ChunkData dataSize; // service size to calculate the processing time
     ChunkData requestSize; // size of service request to calculate the communication time
     ChunkData responseSize; // size of service response to calculate the communication time
