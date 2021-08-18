@@ -35,6 +35,7 @@ class GA : public cSimpleModule
     int numberOfIterations;
     int numberOfServices;
     int numberOfPopulation;
+    int chromosomeSize;
     double dataSizePerMip;
     double unitCostProcessing; //unit cost in $ for processing resource in mips at fog node
     double unitCostStorage; //unit cost in $ for storage resource at fog node (per byte per second)
@@ -82,9 +83,9 @@ class GA : public cSimpleModule
 
 
     struct Service{
-        double dataSize; // service size to calculate the processing time
-        double requestSize; // size of service request to calculate the communication time
-        double responseSize; // size of service response to calculate the communication time
+        double dataSize; // service size (in Bytes) to calculate the processing time
+        double requestSize; // size of service request(in Bytes) to calculate the communication time
+        double responseSize; // size of service response(in Bytes) to calculate the communication time
 
         double serviceDeadline;
 
@@ -107,17 +108,29 @@ class GA : public cSimpleModule
 
     //A chromosome data structure
     typedef std::vector <int> Chromosome;
+    friend std::ostream& operator<<(std::ostream& os, const Chromosome& chromosome);
+
     //Chromosome chromosome;
+
+    struct ValueFitnessCostFunctionsStruct{
+        double serviceTimeValue;
+        double serviceCostValue;
+        double energyConsumptionValue;
+        double fitnessValue;
+    };
+    typedef struct ValueFitnessCostFunctionsStruct ValueFitnessCostFunctions;
 
     struct Individual{
         Chromosome chromosome;
-        double fitnessValue;
+        ValueFitnessCostFunctions valueFitnessCostFunctions;
 
         public:
             static bool compareIndividuals(Individual &a, Individual &b) {
-                return a.fitnessValue > b.fitnessValue;
+                return a.valueFitnessCostFunctions.fitnessValue < b.valueFitnessCostFunctions.fitnessValue;
         }
     };
+    friend std::ostream& operator<<(std::ostream& os, const struct Individual& individual);
+
     typedef struct Individual Individualt;
     typedef std::vector <Individualt> Population;
     Population population;
@@ -125,7 +138,8 @@ class GA : public cSimpleModule
 
 public:
     GA()
-        : numberOfFogNodes(0)
+        : chromosomeSize(0)
+        , numberOfFogNodes(0)
         , numberOfIterations(0)
         , numberOfServices(0)
         , numberOfPopulation(0)
@@ -150,7 +164,7 @@ protected:
     virtual double serviceTime(Chromosome chromosome);
     virtual double energyConsumption(Chromosome chromosome);
     virtual double serviceCost(Chromosome chromosome);
-    virtual double fitnessFunction(Chromosome chromosome);
+    virtual ValueFitnessCostFunctions fitnessFunction(Chromosome chromosome);
     virtual void generationOfInitialPopulation();
     virtual void singlePointCrossOverOperation(Chromosome &chromosome1, Chromosome &chromosome2);
     virtual Chromosome mutationOperation(Chromosome chromosome1);

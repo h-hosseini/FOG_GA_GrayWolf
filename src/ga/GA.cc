@@ -31,10 +31,10 @@ void GA::initialize(int stage)
         //statistics = check_and_cast<statistics *>(getSimulation()->getSystemModule()->getSubmodule("statistics"));
         //selfMsg = new ClockEvent("sendTimer");
         selfMsg = new cMessage("sendTimer");
-
         numberOfFogNodes = par("numberOfFogNodes");
         numberOfIterations = par("numberOfIterations");
         numberOfServices = numberOfFogNodes; // Each service per each fog node //par("numberOfServices");
+        chromosomeSize = numberOfServices;
         numberOfPopulation = par("numberOfPopulation");
 
         dataSizePerMip = par("dataSizePerMip");
@@ -64,6 +64,8 @@ void GA::initialize(int stage)
 
         WATCH_VECTOR(fogNodes);
         WATCH_VECTOR(services);
+
+        WATCH_VECTOR(population);
 
         startTime = par("startTime");
         //scheduleClockEventAt(startTime, selfMsg);
@@ -108,6 +110,7 @@ void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, doub
  * environment given by Eq. (3).
  */
 double GA::serviceTime(Chromosome chromosome){
+
     double processingTime = 0;  // The processing time tpro depends on the service size (data size) ssize i and the processing capacity of the fog node yj given by Eq. (4).
     double communicationTime = 0; // The communication time tcom is defined as the total time involved for transferring the service request to fog nodes and response back to the actuators. tcom depends on the service size (data size) and the link capacity Bf connected between the nodes as shown by Eq. (5).
     double serviceAvailabilityTime = 0; // The service availability time tav involves the time taken for selecting the fog node to deploy the services and data. Also, it depends on the total time of the service request in the waiting queue to get the selected fog nodes’ computational resources. Thus tav depends on the amount of time it takes for completing the current service request.
@@ -122,11 +125,14 @@ double GA::serviceTime(Chromosome chromosome){
         //processingTime += services.at(i).dataSize / fogNodes.at(chromosome.at(i)).processingCapacity;
         double processingTimeServicei = services.at(i).dataSize / fogNodes.at(chromosome.at(i)).processingCapacity;
         processingTime += processingTimeServicei;
-        communicationTime += (services.at(i).requestSize + services.at(i).responseSize) / fogNodes.at(chromosome.at(i)).linkCapacity;
+        communicationTime += (services.at(i).requestSize + services.at(i).responseSize) / (fogNodes.at(chromosome.at(i)).linkCapacity * 1000000); // * 1000000 because the units of the requestSize and responseSize is Byte, but linkCapacity's is Mbps.
         waitingQueueDelay.at(chromosome.at(i)) += processingTime;
         serviceAvailabilityTime += waitingQueueDelay.at(chromosome.at(i)) + processingTimeServicei;
     }
 
+    EV << "Service Time: " << processingTime + communicationTime + serviceAvailabilityTime << " => Processing Time: " << processingTime << ", Communication Time: " << communicationTime << ", Service Availability Time:" << serviceAvailabilityTime << endl;
+
+    return processingTime + communicationTime + serviceAvailabilityTime;
 }
 
 /*
@@ -135,6 +141,7 @@ double GA::serviceTime(Chromosome chromosome){
  * its idle energy is calculate for the cost function.
  */
 double GA::energyConsumption(Chromosome chromosome){
+
     double t0 = 0; // start time
     double t1 = 0; // processing start time
     double tEndDelta = 0; // end time
@@ -177,47 +184,64 @@ double GA::energyConsumption(Chromosome chromosome){
         energyProcessing += energyProcessingIdle + energyProcessingActive;
 
     }
-    return energyProcessing + energyTransmission;
+    EV << "Energy Consumption: " << energyProcessing + energyTransmission << " => Energy Processing: " << energyProcessing << ", Energy Transmission: " << energyTransmission << endl;
 
+    return energyProcessing + energyTransmission;
 }
 
 double GA::serviceCost(Chromosome chromosome){
+
     double processingCost = 0;
     double storageCost = 0;
     double energyCost = 0;
 
     for (int i=0; i<numberOfServices ; i++){
-        processingCost += services.at(i).dataSize / dataSizePerMip * unitCostProcessing;
+        processingCost += services.at(i).dataSize * dataSizePerMip * unitCostProcessing;
         storageCost += services.at(i).dataSize / 8 * unitCostStorage;
     }
 
     energyCost += energyConsumption(chromosome) * unitCostEnergy;
 
+    EV << "Service Cost: " << processingCost + storageCost + energyCost << " => Processing Cost: " << processingCost << ", Storage Cost: " << storageCost << ", Energy Cost:" << energyCost << endl;
     return processingCost + storageCost + energyCost;
-
 }
 
-double GA::fitnessFunction(Chromosome chromosome){
-    return 3 / (serviceTime(chromosome) + serviceCost(chromosome) + energyConsumption(chromosome));
+GA::ValueFitnessCostFunctions GA::fitnessFunction(Chromosome chromosome){
+
+    ValueFitnessCostFunctions valueFitnessCostFunctions;
+    valueFitnessCostFunctions.serviceTimeValue = serviceTime(chromosome);
+    valueFitnessCostFunctions.serviceCostValue = serviceCost(chromosome);
+    valueFitnessCostFunctions.energyConsumptionValue = energyConsumption(chromosome);
+    valueFitnessCostFunctions.fitnessValue = 3 / (valueFitnessCostFunctions.serviceTimeValue + valueFitnessCostFunctions.serviceCostValue + valueFitnessCostFunctions.energyConsumptionValue);
+
+    EV << "Fitness Function Value" << valueFitnessCostFunctions.fitnessValue << ", Sevice Time: " << valueFitnessCostFunctions.serviceTimeValue << ", Service Cost: " << valueFitnessCostFunctions.serviceCostValue << ", Energy Consumtion: " << valueFitnessCostFunctions.energyConsumptionValue << endl;
+
+    return valueFitnessCostFunctions;
+
 }
 
 void GA::generationOfInitialPopulation(){
+    EV << "Generates initial population.";
+
     if(population.size() < numberOfPopulation)
                 population.resize(numberOfPopulation);
 
     for(int n=0; n<numberOfPopulation; n++){
-        //generateChromosoe(){
-        for(int i=0; i<population.at(n).chromosome.size(); i++){
+        if(population.at(n).chromosome.size() < chromosomeSize){
+            population.at(n).chromosome.resize(chromosomeSize);
+        }
+        for(int i=0; i<chromosomeSize; i++){
             population.at(n).chromosome.at(i) = intuniform(0, numberOfFogNodes - 1);
         }
-        population.at(n).fitnessValue = 0;
+        population.at(n).valueFitnessCostFunctions = fitnessFunction(population.at(n).chromosome);
     }
+
 }
 
 void GA::singlePointCrossOverOperation(Chromosome &chromosome1, Chromosome &chromosome2){
-    //Chromosome chromosome1 = population.at(intuniform(0, population.size()));
-    //Chromosome chromosome2 = population.at(intuniform(0, population.size()));
-    int chromosomeSize = chromosome1.size();
+
+    //Chromosome chromosome1 = population.at(intuniform(0, population.size()-1));
+    //Chromosome chromosome2 = population.at(intuniform(0, population.size()-1));
 
     for(int i=ceil(chromosomeSize/2); i< chromosomeSize; i++){
         unsigned int gene = chromosome1.at(i);
@@ -228,13 +252,16 @@ void GA::singlePointCrossOverOperation(Chromosome &chromosome1, Chromosome &chro
 }
 
 GA::Chromosome GA::mutationOperation(Chromosome chromosome){
+
     Chromosome chromosome1 = chromosome;
-    chromosome1.at(intuniform(0, chromosome.size())) = intuniform(0, numberOfFogNodes);
+    chromosome1.at(intuniform(0, chromosome.size()-1)) = intuniform(0, numberOfFogNodes-1);
     return chromosome1;
+
 }
 
 
 enum GA::RouletteWheel GA::rouletteWheel(double elitismRate, double crossoverProbability, double mutationRate){
+
     double linerRouletteWheel = elitismRate + crossoverProbability + mutationRate;
     double randValue = uniform(0 , linerRouletteWheel);
     if(randValue < elitismRate)
@@ -243,55 +270,73 @@ enum GA::RouletteWheel GA::rouletteWheel(double elitismRate, double crossoverPro
         return crossover;
     else
         return mutation;
+
 }
 
 void GA::newGeneration(double elitismRate, double crossoverProbability, double mutationRate){
+
     int elitismIndex = 0;
-    for(int i=0; i<population.size(); i++){
+    if(newPopulation.size() < numberOfPopulation)
+        newPopulation.resize(numberOfPopulation);
+    for(int i=0; i<numberOfPopulation; i++){
+
         enum RouletteWheel rouletteWheelValue = rouletteWheel(elitismRate, crossoverProbability, mutationRate);
+
         if( rouletteWheelValue == elitism){
+
             newPopulation.at(i) = population.at(elitismIndex);
+            EV << "New elitism individual: " << newPopulation.at(i) << endl;
             elitismIndex++;
         }else if(rouletteWheelValue == crossover){
-            Chromosome chromosome1 = population.at(intuniform(0, population.size())).chromosome;
-            Chromosome chromosome2 = population.at(intuniform(0, population.size())).chromosome;
-            singlePointCrossOverOperation(chromosome1, chromosome2);
-            newPopulation.at(i).chromosome = chromosome1;
-            newPopulation.at(i).fitnessValue = 0;
+            Individual individual1 = population.at(intuniform(0, population.size()-1));
+            Individual individual2 = population.at(intuniform(0, population.size()-1));
+            EV << "New crossover individuals: " << individual1 << " and " << individual2 << " => ";
+            singlePointCrossOverOperation(individual1.chromosome, individual2.chromosome);
+            EV << individual1 << " and " << individual2 << "fitness will be updated." << endl;
+            newPopulation.at(i).chromosome = individual1.chromosome;
+            newPopulation.at(i).valueFitnessCostFunctions = fitnessFunction(newPopulation.at(i).chromosome);
             if(++i<population.size()){
-                newPopulation.at(i).chromosome = chromosome2;
-                newPopulation.at(i).fitnessValue = 0;
+                newPopulation.at(i).chromosome = individual2.chromosome;
+                newPopulation.at(i).valueFitnessCostFunctions = fitnessFunction(newPopulation.at(i).chromosome);
             }
-        }else{
-            newPopulation.at(i).chromosome = mutationOperation(population.at(intuniform(0, population.size())).chromosome);
-            newPopulation.at(i).fitnessValue = 0;
+        }else{ // rouletteWheelValue if = mutation
+
+            Individual individual1 = population.at(intuniform(0, population.size()-1));
+            newPopulation.at(i).chromosome = mutationOperation(individual1.chromosome);
+            newPopulation.at(i).valueFitnessCostFunctions = fitnessFunction(newPopulation.at(i).chromosome);
+            EV << "New mutation individuals: " << individual1 << " => " << newPopulation.at(i) << endl;
         }
     }
+
     for(int i=0; i<population.size(); i++){
         population.at(i) = newPopulation.at(i);
     }
+
 }
 
 GA::Individualt GA::executeGa(double elitismRate, double crossoverProbability, double mutationRate){
-    Individualt bestIndividual = population.at(0);
+
     generationOfInitialPopulation();
+    sort(population.begin(), population.end(), Individual::compareIndividuals);
+    Individualt bestIndividual = population.at(0);
     for(int i=0; i<numberOfIterations; i++){
-        for(int j=0; j<numberOfPopulation; j++){
-            population.at(j).fitnessValue = fitnessFunction(population.at(j).chromosome);
-        }
+        newGeneration(elitismRate, crossoverProbability, mutationRate);
         sort(population.begin(), population.end(), Individual::compareIndividuals);
         bestIndividual = population.at(0);
-        newGeneration(elitismRate, crossoverProbability, mutationRate);
     }
     return bestIndividual;
+
 }
 
 void GA::handleMessage(cMessage *msg)
 {
+    Individual bestIndividual;
     if (msg->isSelfMessage()) {
         ASSERT(msg == selfMsg);
-        executeGa(elitismRate, crossoverProbability, mutationRate);
+        bestIndividual = executeGa(elitismRate, crossoverProbability, mutationRate);
     }
+    EV << "The best individual is " << bestIndividual << endl;
+
 }
 
 GA::~GA()
@@ -320,4 +365,23 @@ std::ostream& operator<<(std::ostream& os, const struct GA::FogNode& fogNode)
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const GA::Chromosome& chromosome)
+{
+    os << "{";
+    for(int i=0; i<chromosome.size(); i++){
+        os << "chromosome[" << i << "]: " << chromosome.at(i);
+        if(i!=chromosome.size()-1)
+            os << ", ";
+    }
+    os << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const struct GA::Individual& individual)
+{
+     os << "{chromosome: " << individual.chromosome;
+     os << ", fitnessValue: " << individual.valueFitnessCostFunctions.fitnessValue;
+     os << ", serviceTimeValue: " << individual.valueFitnessCostFunctions.serviceTimeValue;
+     os << ", serviceCostValue: " << individual.valueFitnessCostFunctions.serviceCostValue;
+     os << ", energyConsumptionValue: " << individual.valueFitnessCostFunctions.energyConsumptionValue << "}";
+}
 } // namespace fogfn
