@@ -23,6 +23,7 @@ import inet.physicallayer.wireless.ieee80211.bitlevel.Ieee80211LayeredScalarRadi
 import inet.visualizer.contract.IIntegratedVisualizer;
 
 import fogfn.src.ga.GA;
+import fogfn.src.statistics.Statistics;
 
 network Sim1
 {
@@ -31,18 +32,21 @@ network Sim1
     submodules:
         visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
             parameters:
-                @display("p=78,39;is=s");
+                @display("p=35,39;is=s");
         }
         configurator: Ipv4NetworkConfigurator {
             parameters:
-                @display("p=250,39;is=s");
+                @display("p=219,39;is=s");
         }
         radioMedium: Ieee80211LayeredScalarRadioMedium {
             parameters:
-                @display("p=177,39;is=s");
+                @display("p=139,39;is=s");
         }
         gaOptimizer: GA {
-            @display("p=315,39;is=s");
+            @display("p=299,39;is=s");
+        }
+        statistics: Statistics {
+            @display("p=374,39;is=s");
         }
         admin: AdhocHost {
             parameters:
