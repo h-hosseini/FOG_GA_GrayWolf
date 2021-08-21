@@ -35,11 +35,11 @@ protected:
 
     virtual void initialize(int stage);
 
-    virtual void saveStatistics();
-
     virtual void handleMessage(cMessage* msg);
 
 public:
+
+    void collectGaParameters(double serviceTimeValue, double serviceCostValue, double energyConsumptionValue, double fitnessValue);
 
 };
 

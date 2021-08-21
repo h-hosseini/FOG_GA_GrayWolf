@@ -28,7 +28,7 @@ Define_Module(GA);
 void GA::initialize(int stage)
 {
     if (stage == INITSTAGE_LOCAL){
-        //statistics = check_and_cast<statistics *>(getSimulation()->getSystemModule()->getSubmodule("statistics"));
+        statistics = check_and_cast<Statistics *>(getSimulation()->getSystemModule()->getSubmodule("statistics"));
         //selfMsg = new ClockEvent("sendTimer");
         selfMsg = new cMessage("sendTimer");
         numberOfFogNodes = par("numberOfFogNodes");
@@ -324,6 +324,7 @@ GA::Individualt GA::executeGa(double elitismRate, double crossoverProbability, d
         sort(population.begin(), population.end(), Individual::compareIndividuals);
         bestIndividual = population.at(0);
     }
+    statistics->collectGaParameters(bestIndividual.valueFitnessCostFunctions.serviceTimeValue, bestIndividual.valueFitnessCostFunctions.serviceCostValue, bestIndividual.valueFitnessCostFunctions.energyConsumptionValue, bestIndividual.valueFitnessCostFunctions.fitnessValue);
     return bestIndividual;
 
 }

@@ -39,152 +39,35 @@ void Statistics::initialize(int stage)
 
 void Statistics::handleMessage(cMessage* msg)
 {
-/*    if (msg->getKind() == Global_REPAIR_TIMER){
-        numberOfGlogalRepaires++;
-        scheduleNextGlobalRepair();
-    }else{
-        EV << "Unknown self message is deleted." << endl;
-        delete msg;
-    }
-
-    return;*/
+    error("This module doesn't handle any message!");
 }
 
-
-void Statistics::saveStatistics()
+void Statistics::collectGaParameters(double serviceTimeValue, double serviceCostValue, double energyConsumptionValue, double fitnessValue)
 {
-/*
     //Time statistics
-    FILE *convergenceTimeStart, *convergenceTimeEndUpward, *convergenceTimeEndDownward,  *convergenceTimeDownward, *convergenceTimeUpward, *joiningTimeUpward, *joiningTimeDownward;
+    FILE *serviceTimeValueFp, *serviceCostValueFp, *energyConsumptionValueFp, *fitnessValueFp;
 
-    convergenceTimeStart = fopen("convergenceTimeStart.txt", "a");
-    fprintf(convergenceTimeStart, "%f\n", this->convergenceTimeStart.dbl());
-    fclose(convergenceTimeStart);
+    fitnessValueFp = fopen("1_fitnessValue.txt", "a");
+    fprintf(fitnessValueFp, "%f\n", fitnessValue);
+    fclose(fitnessValueFp);
 
-    convergenceTimeEndUpward = fopen("convergenceTimeEndUpward.txt", "a");
-    fprintf(convergenceTimeEndUpward, "%f\n", this->convergenceTimeEndUpward.dbl());
-    fclose(convergenceTimeEndUpward);
+    serviceTimeValueFp = fopen("2_serviceTimeValue.txt", "a");
+    fprintf(serviceTimeValueFp, "%f\n", serviceTimeValue);
+    fclose(serviceTimeValueFp);
 
-    joiningTimeUpward = fopen("joiningTimeUpward.txt", "a");
-    for (unsigned int i=0; i<nodeStateList.size(); i++){
-        fprintf(joiningTimeUpward, "%f\n", nodeStateList.at(i).joiningTimeUpward.dbl());
-    }
-    fclose(joiningTimeUpward);
+    serviceCostValueFp = fopen("3_serviceCostValue.txt", "a");
+    fprintf(serviceCostValueFp, "%f\n", serviceCostValue);
+    fclose(serviceCostValueFp);
 
-    convergenceTimeUpward = fopen("01_1_convergenceTimeUpward.txt", "a");
-    fprintf(convergenceTimeUpward, "%f\n", this->convergenceTimeEndUpward.dbl() - this->convergenceTimeStart.dbl());
-    fclose(convergenceTimeUpward);
+    energyConsumptionValueFp = fopen("4_energyConsumptionValue.txt", "a");
+    fprintf(energyConsumptionValueFp, "%f\n", energyConsumptionValue);
+    fclose(energyConsumptionValueFp);
 
-    if ((mop == Storing_Mode_of_Operation_with_no_multicast_support) || (mop == Non_Storing_Mode_of_Operation)){
-        convergenceTimeEndDownward = fopen("convergenceTimeEndDownward.txt", "a");
-        fprintf(convergenceTimeEndDownward, "%f\n", this->convergenceTimeEndDownward.dbl());
-        fclose(convergenceTimeEndDownward);
-
-        joiningTimeDownward = fopen("joiningTimeDownward.txt", "a");
-        for (unsigned int i=0; i<nodeStateList.size(); i++){
-            fprintf(joiningTimeDownward, "%f\n", nodeStateList.at(i).joiningTimeDownward.dbl());
-        }
-        fclose(joiningTimeDownward);
-
-        convergenceTimeDownward = fopen("01_2_convergenceTimeDownward.txt", "a");
-        fprintf(convergenceTimeDownward, "%f\n", this->convergenceTimeEndDownward.dbl() - this->convergenceTimeStart.dbl());
-        fclose(convergenceTimeDownward);
-    }
-
-    //Message statistics
-    FILE *averageSentDIO, *averageSentDIS, *averageSentDAO, *averageNumberOfMessages;
-    double averageDIO = 0, averageDIS = 0, averageDAO = 0;
-
-    averageSentDIO = fopen("averageSentDIO.txt", "a");
-    averageDIO = (double)(numSentDIO) / nodeStateList.size();
-    fprintf(averageSentDIO, "%f\n", averageDIO);
-    fclose(averageSentDIO);
-
-    averageSentDIS = fopen("averageSentDIS.txt", "a");
-    averageDIS = (double)(numSentDIS) / nodeStateList.size();
-    fprintf(averageSentDIS, "%f\n", averageDIS);
-    fclose(averageSentDIS);
-
-    if ((mop == Storing_Mode_of_Operation_with_no_multicast_support) || (mop == Non_Storing_Mode_of_Operation)){
-        averageSentDAO = fopen("averageSentDAO.txt", "a");
-        averageDAO = (double)(numSentDAO) / nodeStateList.size();
-        fprintf(averageSentDAO, "%f\n", averageDAO);
-        fclose(averageSentDAO);
-    }
-
-    averageNumberOfMessages = fopen("02_averageNumberOfMessages.txt", "a");
-    fprintf(averageNumberOfMessages, "%f\n", averageDIO + averageDIS + averageDAO);
-    fclose(averageNumberOfMessages);
-
-    //Table statistics
-    FILE *averageNumberOfNeighborsFP, *averageNumberOfParentsFP, *averageNumberOfRoutesFP, *averageNumberOfSRRoutesFP, *averageNumberofTableEntriesFP;
-    double averageNumberOfNeighbors, averageNumberOfParents, averageNumberOfRoutes, averageNumberOfSRRoutes;
-
-    averageNumberOfNeighbors = (double) (numberOfNeighbors) / nodeStateList.size();
-    averageNumberOfNeighborsFP = fopen("averageNumberOfNeighbors.txt", "a");
-    fprintf(averageNumberOfNeighborsFP, "%f\n", averageNumberOfNeighbors);
-    fclose(averageNumberOfNeighborsFP);
-
-    averageNumberOfParents = (double) (numberOfParents) / nodeStateList.size();
-    averageNumberOfParentsFP = fopen("averageNumberOfParents.txt", "a");
-    fprintf(averageNumberOfParentsFP, "%f\n", averageNumberOfParents);
-    fclose(averageNumberOfParentsFP);
-
-    averageNumberOfRoutes = (double)(numberOfRoutes) / nodeStateList.size();
-    averageNumberOfRoutesFP = fopen("averageNumberOfRoutes.txt", "a");
-    fprintf(averageNumberOfRoutesFP, "%f\n", averageNumberOfRoutes);
-    fclose(averageNumberOfRoutesFP);
-
-    if (mop == Non_Storing_Mode_of_Operation){
-        averageNumberOfSRRoutes = (double)(numberOfSRRoutes) / nodeStateList.size();
-        averageNumberOfSRRoutesFP = fopen("averageNumberOfSRRoutes.txt", "a");
-        fprintf(averageNumberOfSRRoutesFP, "%f\n", averageNumberOfSRRoutes);
-        fclose(averageNumberOfSRRoutesFP);
-    }
-
-    averageNumberofTableEntriesFP = fopen("03_averageNumberofTableEntries.txt", "a");
-    //fprintf(averageNumberofTableEntriesFP, "%f\n", averageNumberOfNeighbors + averageNumberOfParents + averageNumberOfDefaultRoutes + averageNumberOfRoutes);
-    fprintf(averageNumberofTableEntriesFP, "%f\n", averageNumberOfNeighbors + averageNumberOfParents + averageNumberOfRoutes);
-    fclose(averageNumberofTableEntriesFP);
-
-    //Hop count statistics
-    if ((mop == Storing_Mode_of_Operation_with_no_multicast_support) || (mop == Non_Storing_Mode_of_Operation) || (mop == No_Downward_Routes_maintained_by_RPL)){
-        calculateHopCount();
-
-        FILE *numberofHopCountFP, *averageNumberofHopCountFP;
-        numberofHopCountFP = fopen("numberofHopCount.txt", "a");
-        averageNumberofHopCount = 0;
-        int numflows = 0;
-        for (unsigned int i = 0; i < nodeStateList.size(); i++){
-            for (unsigned int j = 0; j < nodeStateList.size(); j++){
-                //fprintf(numberofHopCountFP, "%3d\t", hopCountMat.at(i).at(j));  //sorted hopCountMat
-                fprintf(numberofHopCountFP, "%3d\t", hopCountMat.at(nodeIndexToOrderedIndex(i)).at(nodeIndexToOrderedIndex(j)));  //hopCountMat must be converted from ordered index to non-ordered/original one.
-                if ((i != j) && (hopCountMat.at(nodeIndexToOrderedIndex(i)).at(nodeIndexToOrderedIndex(j)) != -1)){
-                    averageNumberofHopCount += hopCountMat.at(nodeIndexToOrderedIndex(i)).at(nodeIndexToOrderedIndex(j));
-                    numflows++; // Finally, numflows will be nodeStateList.size() ^ 2 - nodeStateList.size()
-                }
-            }
-            fprintf(numberofHopCountFP, "\n");
-        }
-        fprintf(numberofHopCountFP, "\n -------------------------------------------------------------\n");
-        fclose(numberofHopCountFP);
-        averageNumberofHopCount /= numflows;
-
-        averageNumberofHopCountFP = fopen("04_averageNumberofHopCount.txt", "a");
-        fprintf(averageNumberofHopCountFP, "%f\n", averageNumberofHopCount);
-        fclose(averageNumberofHopCountFP);
-    }
-
-    //Other statistics
-    //FILE *preferedParent, *nodeRank;
-
-     */
 }
+
 Statistics::~Statistics()
 {
-    //cancelAndDelete(globalRepairTimer);
-
-
+    //cancelAndDelete(...);
 }
 
 } // namespace fogfn
