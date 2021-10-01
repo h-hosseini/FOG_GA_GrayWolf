@@ -33,7 +33,7 @@ PROJECTRELATIVE_PATH =
 O = $(PROJECT_OUTPUT_DIR)/$(CONFIGNAME)/$(PROJECTRELATIVE_PATH)
 
 # Object files for local .cc, .msg and .sm files
-OBJS = $O/src/ga/GA.o $O/src/statistics/Statistics.o $O/src/udpapp/UdpBasicAppFog.o $O/src/udpapp/UdpSinkFog.o
+OBJS = $O/src/ga/GA.o $O/src/grayWolf/GrayWolf.o $O/src/statistics/Statistics.o $O/src/udpapp/UdpBasicAppFog.o $O/src/udpapp/UdpSinkFog.o
 
 # Message files
 MSGFILES =

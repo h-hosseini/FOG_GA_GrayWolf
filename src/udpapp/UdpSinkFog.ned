@@ -27,7 +27,10 @@ import inet.applications.contract.IApp;
 simple UdpSinkFog like IApp
 {
     parameters:
+        //Extra Begin      
         @class(fogfn::UdpSinkFog);
+        string optimizerType = default("Genetic");
+        //Extra End
         string interfaceTableModule;   // The path to the InterfaceTable module
         double startTime @unit(s) = default(0s); // application start time
         double stopTime @unit(s) = default(-1s);  // time of finishing receiving

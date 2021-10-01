@@ -79,7 +79,7 @@ void UdpBasicAppFog::initialize(int stage)
         responseSize.doubleValue = par("responseSize"); // size of service response to calculate the communication time
 
         serviceDeadline.doubleValue = par("serviceDeadline");
-        //Extra End
+
 
     }else if(stage == INITSTAGE_TRANSPORT_LAYER){
         //L3Address myIpAddr;
@@ -94,11 +94,22 @@ void UdpBasicAppFog::initialize(int stage)
                 myIpAddr = ift->getInterface(k)->getIpv4Address();
             }
         }
-        gaOptimizer = check_and_cast<GA *>(getSimulation()->getSystemModule()->getSubmodule("gaOptimizer"));
-        gaOptimizer->registFogNodesInfo(getContainingNode(this), myIpAddr, getContainingNode(this)->getIndex());
+        optimizerType = par("optimizerType").stdstringValue();
+        WATCH(optimizerType);
+        if(optimizerType == "Genetic"){
+            grayWolfOptimizer = nullptr;
+            gaOptimizer = check_and_cast<GA *>(getSimulation()->getSystemModule()->getSubmodule("gaOptimizer"));
+            gaOptimizer->registFogNodesInfo(getContainingNode(this), myIpAddr, getContainingNode(this)->getIndex());
+        }else if(optimizerType == "GrayWolf"){
+            gaOptimizer = nullptr;
+            grayWolfOptimizer = check_and_cast<GrayWolf *>(getSimulation()->getSystemModule()->getSubmodule("grayWolfOptimizer"));
+            grayWolfOptimizer->registFogNodesInfo(getContainingNode(this), myIpAddr, getContainingNode(this)->getIndex());
+        }
+
         EV_INFO << "My index is " << getContainingNode(this)->getIndex() << ", my IP Address is " << myIpAddr << endl;
 
     }
+    //Extra End
 }
 
 void UdpBasicAppFog::finish()

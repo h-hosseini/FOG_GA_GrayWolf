@@ -14,7 +14,9 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "src/grayWolf/GrayWolf.h"
 #include "src/ga/GA.h"
+
 
 #include <vector>
 #include <algorithm>    // std::sort
@@ -23,9 +25,9 @@
 namespace fogfn {
 using namespace inet;
 
-Define_Module(GA);
+Define_Module(GrayWolf);
 
-void GA::initialize(int stage)
+void GrayWolf::initialize(int stage)
 {
     if (stage == INITSTAGE_LOCAL){
         statistics = check_and_cast<Statistics *>(getSimulation()->getSystemModule()->getSubmodule("statistics"));
@@ -34,7 +36,7 @@ void GA::initialize(int stage)
         numberOfFogNodes = par("numberOfFogNodes");
         numberOfIterations = par("numberOfIterations");
         numberOfServices = numberOfFogNodes; // Each service per each fog node //par("numberOfServices");
-        chromosomeSize = numberOfServices;
+        wolfSize = numberOfServices;
         numberOfPopulation = par("numberOfPopulation");
 
         dataSizePerMip = par("dataSizePerMip");
@@ -42,12 +44,8 @@ void GA::initialize(int stage)
         unitCostStorage = par("unitCostStorage"); //unit cost in $ for storage resource at fog node (per byte per second)
         unitCostEnergy = par("unitCostEnergy"); //unit cost in $ for energy consumption per joule in fog environment
 
-        elitismRate = par("elitismRate");
-        crossoverProbability = par("crossoverProbability");
-        mutationRate = par("mutationRate");
-
         fogNodes.resize(numberOfFogNodes);
-        services.resize(numberOfFogNodes); //Each Fog node one service
+        services.resize(numberOfServices); //Each Fog node one service
         WATCH(numberOfFogNodes);
         WATCH(numberOfIterations);
         WATCH(numberOfServices);
@@ -57,10 +55,6 @@ void GA::initialize(int stage)
         WATCH(unitCostProcessing);
         WATCH(unitCostStorage);
         WATCH(unitCostEnergy);
-
-        WATCH(elitismRate);
-        WATCH(crossoverProbability);
-        WATCH(mutationRate);
 
         WATCH_VECTOR(fogNodes);
         WATCH_VECTOR(services);
@@ -74,13 +68,13 @@ void GA::initialize(int stage)
 
 }
 
-void GA::registFogNodesInfo(cModule *host, L3Address ipAddress, int fogIndex){
+void GrayWolf::registFogNodesInfo(cModule *host, L3Address ipAddress, int fogIndex){
     fogNodes.at(fogIndex).host = host;
     fogNodes.at(fogIndex).ipAddress = ipAddress;
-    EV_INFO << "GA::registFogNodesInfo(): Fog node name: " << host->getFullName() << ", Fog node #: " << fogIndex << ", Ip address: " << ipAddress << " is registered." << endl;
+    EV_INFO << "GrayWolf::registFogNodesInfo(): Fog node name: " << host->getFullName() << ", Fog node #: " << fogIndex << ", Ip address: " << ipAddress << " is registered." << endl;
 }
 
-void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, double linkCapacity, double powerIdle, double powerTransmission, double powerProcessing, double dataSize, double requestSize, double responseSize, double serviceDeadline){
+void GrayWolf::registFogServiceInfo(L3Address srcAddr, double processingCapacity, double linkCapacity, double powerIdle, double powerTransmission, double powerProcessing, double dataSize, double requestSize, double responseSize, double serviceDeadline){
     int fogIndex = -1;
     for (int i=0; i<numberOfFogNodes; i++){
         if (fogNodes.at(i).ipAddress == srcAddr){
@@ -88,8 +82,8 @@ void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, doub
         }
     }
     if (fogIndex == -1){
-        error("GA::registFogServiceInfo(): The Fog node has not been registered before!");
-        //throw cRuntimeError("GA::registFogServiceInfo(): The Fog node has not been registered before!");
+        error("GrayWolf::registFogServiceInfo(): The Fog node has not been registered before!");
+        //throw cRuntimeError("GrayWolf::registFogServiceInfo(): The Fog node has not been registered before!");
     }
     fogNodes.at(fogIndex).processingCapacity = processingCapacity;
     fogNodes.at(fogIndex).linkCapacity = linkCapacity;
@@ -101,7 +95,7 @@ void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, doub
     services.at(fogIndex).responseSize = responseSize;
     services.at(fogIndex).serviceDeadline = serviceDeadline;
 
-    EV_INFO << "GA::registFogServiceInfo(): service is registered. Fog info: " << fogNodes.at(fogIndex) << ", Service info: " << services.at(fogIndex) << endl;
+    EV_INFO << "GrayWolf::registFogServiceInfo(): service is registered. Fog info: " << fogNodes.at(fogIndex) << ", Service info: " << services.at(fogIndex) << endl;
 }
 
 /*
@@ -109,7 +103,7 @@ void GA::registFogServiceInfo(L3Address srcAddr, double processingCapacity, doub
  * and service availability time for the services in the fog computing
  * environment given by Eq. (3).
  */
-double GA::serviceTime(Chromosome chromosome){
+double GrayWolf::serviceTime(Wolf wolf){
 
     double processingTime = 0;  // The processing time tpro depends on the service size (data size) ssize i and the processing capacity of the fog node yj given by Eq. (4).
     double communicationTime = 0; // The communication time tcom is defined as the total time involved for transferring the service request to fog nodes and response back to the actuators. tcom depends on the service size (data size) and the link capacity Bf connected between the nodes as shown by Eq. (5).
@@ -122,12 +116,12 @@ double GA::serviceTime(Chromosome chromosome){
     }
 
     for (int i=0; i<numberOfServices ; i++){
-        //processingTime += services.at(i).dataSize / fogNodes.at(chromosome.at(i)).processingCapacity;
-        double processingTimeServicei = services.at(i).dataSize / fogNodes.at(chromosome.at(i)).processingCapacity;
+        //processingTime += services.at(i).dataSize / fogNodes.at(wolf.at(i)).processingCapacity;
+        double processingTimeServicei = services.at(i).dataSize / fogNodes.at(wolf.at(i)).processingCapacity;
         processingTime += processingTimeServicei;
-        communicationTime += (services.at(i).requestSize + services.at(i).responseSize) / (fogNodes.at(chromosome.at(i)).linkCapacity * 1000000); // * 1000000 because the units of the requestSize and responseSize is Byte, but linkCapacity's is Mbps.
-        waitingQueueDelay.at(chromosome.at(i)) += processingTime;
-        serviceAvailabilityTime += waitingQueueDelay.at(chromosome.at(i)) + processingTimeServicei;
+        communicationTime += (services.at(i).requestSize + services.at(i).responseSize) / (fogNodes.at(wolf.at(i)).linkCapacity * 1000000); // * 1000000 because the units of the requestSize and responseSize is Byte, but linkCapacity's is Mbps.
+        waitingQueueDelay.at(wolf.at(i)) += processingTime;
+        serviceAvailabilityTime += waitingQueueDelay.at(wolf.at(i)) + processingTimeServicei;
     }
 
     EV << "Service Time: " << processingTime + communicationTime + serviceAvailabilityTime << " => Processing Time: " << processingTime << ", Communication Time: " << communicationTime << ", Service Availability Time:" << serviceAvailabilityTime << endl;
@@ -137,10 +131,10 @@ double GA::serviceTime(Chromosome chromosome){
 
 /*
  * This method calculates consumed energy for all nodes.
- * If a fog node does not participate in the optimization(or chromosome),
+ * If a fog node does not participate in the optimization(or wolf),
  * its idle energy is calculate for the cost function.
  */
-double GA::energyConsumption(Chromosome chromosome){
+double GrayWolf::energyConsumption(Wolf wolf){
 
     double t0 = 0; // start time
     double t1 = 0; // processing start time
@@ -154,7 +148,7 @@ double GA::energyConsumption(Chromosome chromosome){
     for(int i=0; i<numberOfFogNodes; i++){
         double tEndDeltai = 0;
         for(int j=0; j<numberOfServices; j++){
-            if(chromosome.at(j) == i){
+            if(wolf.at(j) == i){
                 tEndDeltai += services.at(j).dataSize / fogNodes.at(i).processingCapacity;
             }
         }
@@ -189,7 +183,7 @@ double GA::energyConsumption(Chromosome chromosome){
     return energyProcessing + energyTransmission;
 }
 
-double GA::serviceCost(Chromosome chromosome){
+double GrayWolf::serviceCost(Wolf wolf){
 
     double processingCost = 0;
     double storageCost = 0;
@@ -200,18 +194,18 @@ double GA::serviceCost(Chromosome chromosome){
         storageCost += services.at(i).dataSize / 8 * unitCostStorage;
     }
 
-    energyCost += energyConsumption(chromosome) * unitCostEnergy;
+    energyCost += energyConsumption(wolf) * unitCostEnergy;
 
     EV << "Service Cost: " << processingCost + storageCost + energyCost << " => Processing Cost: " << processingCost << ", Storage Cost: " << storageCost << ", Energy Cost:" << energyCost << endl;
     return processingCost + storageCost + energyCost;
 }
 
-GA::ValueFitnessCostFunctions GA::fitnessFunction(Chromosome chromosome){
+GrayWolf::ValueFitnessCostFunctions GrayWolf::fitnessFunction(Wolf wolf){
 
     ValueFitnessCostFunctions valueFitnessCostFunctions;
-    valueFitnessCostFunctions.serviceTimeValue = serviceTime(chromosome);
-    valueFitnessCostFunctions.serviceCostValue = serviceCost(chromosome);
-    valueFitnessCostFunctions.energyConsumptionValue = energyConsumption(chromosome);
+    valueFitnessCostFunctions.serviceTimeValue = serviceTime(wolf);
+    valueFitnessCostFunctions.serviceCostValue = serviceCost(wolf);
+    valueFitnessCostFunctions.energyConsumptionValue = energyConsumption(wolf);
     valueFitnessCostFunctions.fitnessValue = 3 / (valueFitnessCostFunctions.serviceTimeValue + valueFitnessCostFunctions.serviceCostValue + valueFitnessCostFunctions.energyConsumptionValue);
 
     EV << "Fitness Function Value" << valueFitnessCostFunctions.fitnessValue << ", Sevice Time: " << valueFitnessCostFunctions.serviceTimeValue << ", Service Cost: " << valueFitnessCostFunctions.serviceCostValue << ", Energy Consumtion: " << valueFitnessCostFunctions.energyConsumptionValue << endl;
@@ -220,132 +214,153 @@ GA::ValueFitnessCostFunctions GA::fitnessFunction(Chromosome chromosome){
 
 }
 
-void GA::generationOfInitialPopulation(){
-    EV << "Generates initial population.";
+void GrayWolf::generationOfInitialPopulation(){
+    EV << "Generates initial population." << endl;
 
     if(population.size() < numberOfPopulation)
                 population.resize(numberOfPopulation);
 
     for(int n=0; n<numberOfPopulation; n++){
-        if(population.at(n).chromosome.size() < chromosomeSize){
-            population.at(n).chromosome.resize(chromosomeSize);
+        if(population.at(n).wolf.size() < wolfSize){
+            population.at(n).wolf.resize(wolfSize);
         }
-        for(int i=0; i<chromosomeSize; i++){
-            population.at(n).chromosome.at(i) = intuniform(0, numberOfFogNodes - 1);
+        for(int i=0; i<wolfSize; i++){
+            population.at(n).wolf.at(i) = intuniform(0, numberOfFogNodes - 1);
         }
-        population.at(n).valueFitnessCostFunctions = fitnessFunction(population.at(n).chromosome);
+        population.at(n).valueFitnessCostFunctions = fitnessFunction(population.at(n).wolf);
+        //EV << "Initial population[" << n << "]: " << population.at(n) << endl;
+    }
+    EV << "Generates initial population." << endl;
+}
+
+int GrayWolf::crossOver(int x1, int x2, int x3){
+
+    int selectedWolf = intuniform(0, 2);
+
+    if(selectedWolf == 0){
+        return x1;
+    }else if(selectedWolf == 1){
+        return x2;
     }
 
+    return x3;
 }
 
-void GA::singlePointCrossOverOperation(Chromosome &chromosome1, Chromosome &chromosome2){
+/*
+void GrayWolf::updateWolves(double a){
 
-    //Chromosome chromosome1 = population.at(intuniform(0, population.size()-1));
-    //Chromosome chromosome2 = population.at(intuniform(0, population.size()-1));
+    Wolf alpha = population.at(0).wolf;
+    Wolf beta = population.at(1).wolf;
+    Wolf delta = population.at(2).wolf;
 
-    for(int i=ceil(chromosomeSize/2); i< chromosomeSize; i++){
-        unsigned int gene = chromosome1.at(i);
-        chromosome1.at(i) = chromosome2.at(i);
-        chromosome2.at(i) = gene;
-    }
-
-}
-
-GA::Chromosome GA::mutationOperation(Chromosome chromosome){
-
-    Chromosome chromosome1 = chromosome;
-    chromosome1.at(intuniform(0, chromosome.size()-1)) = intuniform(0, numberOfFogNodes-1);
-    return chromosome1;
-
-}
-
-
-enum GA::RouletteWheel GA::rouletteWheel(double elitismRate, double crossoverProbability, double mutationRate){
-
-    double linerRouletteWheel = elitismRate + crossoverProbability + mutationRate;
-    double randValue = uniform(0 , linerRouletteWheel);
-    if(randValue < elitismRate)
-        return elitism;
-    else if(randValue < crossoverProbability)
-        return crossover;
-    else
-        return mutation;
-
-}
-
-void GA::newGeneration(double elitismRate, double crossoverProbability, double mutationRate){
-
-    int elitismIndex = 0;
-    if(newPopulation.size() < numberOfPopulation)
-        newPopulation.resize(numberOfPopulation);
     for(int i=0; i<numberOfPopulation; i++){
+        for(int j=0; j<wolfSize; j++){
+            // Alpha
+            double r1 = uniform(0, 1);
+            double r2 = uniform(0, 1);
+            double A1 = 2.0 * a * r1 - a;
+            double C1 = 2.0 * r2;
+            double dAlpha = std::abs(C1 * alpha.at(j) - population.at(i).wolf.at(j));
+            double X1 = alpha.at(j) - A1 * dAlpha;
+            // Beta
+            r1 = uniform(0, 1);
+            r2 = uniform(0, 1);
+            A1 = 2.0 * a * r1 - a;
+            C1 = 2.0 * r2;
+            double dBeta = std::abs(C1 * beta.at(j) - population.at(i).wolf.at(j));
+            double X2 = beta.at(j) - A1 * dBeta;
+            // Delta
+            r1 = uniform(0, 1);
+            r2 = uniform(0, 1);
+            A1 = 2.0 * a * r1 - a;
+            C1 = 2.0 * r2;
+            double dDelta = std::abs(C1 * delta.at(j) - population.at(i).wolf.at(j));
+            double X3 = delta.at(j) - A1 * dDelta;
 
-        enum RouletteWheel rouletteWheelValue = rouletteWheel(elitismRate, crossoverProbability, mutationRate);
+            population.at(i).wolf.at(j) = (X1 + X2 + X3) / 3.0;
 
-        if( rouletteWheelValue == elitism){
 
-            newPopulation.at(i) = population.at(elitismIndex);
-            EV << "New elitism individual: " << newPopulation.at(i) << endl;
-            elitismIndex++;
-        }else if(rouletteWheelValue == crossover){
-            Individual individual1 = population.at(intuniform(0, population.size()-1));
-            Individual individual2 = population.at(intuniform(0, population.size()-1));
-            EV << "New crossover individuals: " << individual1 << " and " << individual2 << " => ";
-            singlePointCrossOverOperation(individual1.chromosome, individual2.chromosome);
-            EV << individual1 << " and " << individual2 << "fitness will be updated." << endl;
-            newPopulation.at(i).chromosome = individual1.chromosome;
-            newPopulation.at(i).valueFitnessCostFunctions = fitnessFunction(newPopulation.at(i).chromosome);
-            if(++i<population.size()){
-                newPopulation.at(i).chromosome = individual2.chromosome;
-                newPopulation.at(i).valueFitnessCostFunctions = fitnessFunction(newPopulation.at(i).chromosome);
-            }
-        }else{ // rouletteWheelValue if = mutation
-
-            Individual individual1 = population.at(intuniform(0, population.size()-1));
-            newPopulation.at(i).chromosome = mutationOperation(individual1.chromosome);
-            newPopulation.at(i).valueFitnessCostFunctions = fitnessFunction(newPopulation.at(i).chromosome);
-            EV << "New mutation individuals: " << individual1 << " => " << newPopulation.at(i) << endl;
         }
+        population.at(i).valueFitnessCostFunctions = fitnessFunction(population.at(i).wolf);
+        EV << "Updated Wolf#" << i << ": " << population.at(i) << endl;
     }
+}
+*/
 
-    for(int i=0; i<population.size(); i++){
-        population.at(i) = newPopulation.at(i);
+void GrayWolf::updateWolves(double a){
+
+    Wolf alpha = population.at(0).wolf;
+    Wolf beta = population.at(1).wolf;
+    Wolf delta = population.at(2).wolf;
+
+    for(int i=0; i<numberOfPopulation; i++){
+        for(int j=0; j<wolfSize; j++){
+            // Alpha
+            double r1 = uniform(0, 1);
+            double r2 = uniform(0, 1);
+            double A1 = 2.0 * a * r1 - a;
+            double C1 = 2.0 * r2;
+            double dAlpha = std::abs(C1 * alpha.at(j) - population.at(i).wolf.at(j));
+            double X1 = alpha.at(j) - A1 * dAlpha;
+            // Beta
+            r1 = uniform(0, 1);
+            r2 = uniform(0, 1);
+            A1 = 2.0 * a * r1 - a;
+            C1 = 2.0 * r2;
+            double dBeta = std::abs(C1 * beta.at(j) - population.at(i).wolf.at(j));
+            double X2 = beta.at(j) - A1 * dBeta;
+            // Delta
+            r1 = uniform(0, 1);
+            r2 = uniform(0, 1);
+            A1 = 2.0 * a * r1 - a;
+            C1 = 2.0 * r2;
+            double dDelta = std::abs(C1 * delta.at(j) - population.at(i).wolf.at(j));
+            double X3 = delta.at(j) - A1 * dDelta;
+
+            int x1 = std::abs((int) X1) % numberOfFogNodes;
+            int x2 = std::abs((int) X2) % numberOfFogNodes;
+            int x3 = std::abs((int) X3) % numberOfFogNodes;
+            population.at(i).wolf.at(j) = crossOver(x1, x2, x3);
+            EV << "X1, X2, X3: " << X1 << ", " << X2 << ", " << X3 << ", " << " and x1, x2, x3: " << x1 << ", " << x2 << ", " << x3 << " and crossover:" << population.at(i).wolf.at(j) << endl;
+        }
+        population.at(i).valueFitnessCostFunctions = fitnessFunction(population.at(i).wolf);
+        EV << "Updated Wolf#" << i << ": " << population.at(i) << endl;
     }
-
 }
 
-GA::Individualt GA::executeGa(double elitismRate, double crossoverProbability, double mutationRate){
+GrayWolf::Individualt GrayWolf::executeGrayWolf(){
 
     generationOfInitialPopulation();
     sort(population.begin(), population.end(), Individual::compareIndividuals);
     Individualt bestIndividual = population.at(0);
     for(int i=0; i<numberOfIterations; i++){
-        newGeneration(elitismRate, crossoverProbability, mutationRate);
+        double a = 2 * (1 - (i * i) / (numberOfIterations * numberOfIterations));
+        updateWolves(a);
         sort(population.begin(), population.end(), Individual::compareIndividuals);
         bestIndividual = population.at(0);
     }
-    statistics->collectGaParameters(bestIndividual.valueFitnessCostFunctions.serviceTimeValue, bestIndividual.valueFitnessCostFunctions.serviceCostValue, bestIndividual.valueFitnessCostFunctions.energyConsumptionValue, bestIndividual.valueFitnessCostFunctions.fitnessValue);
+    statistics->collectGrayWolfParameters(bestIndividual.valueFitnessCostFunctions.serviceTimeValue, bestIndividual.valueFitnessCostFunctions.serviceCostValue, bestIndividual.valueFitnessCostFunctions.energyConsumptionValue, bestIndividual.valueFitnessCostFunctions.fitnessValue);
     return bestIndividual;
 
 }
 
-void GA::handleMessage(cMessage *msg)
+void GrayWolf::handleMessage(cMessage *msg)
 {
     Individual bestIndividual;
     if (msg->isSelfMessage()) {
         ASSERT(msg == selfMsg);
-        bestIndividual = executeGa(elitismRate, crossoverProbability, mutationRate);
+        bestIndividual = executeGrayWolf();
     }
     EV << "The best individual is " << bestIndividual << endl;
 
 }
 
-GA::~GA()
+GrayWolf::~GrayWolf()
 {
     cancelAndDelete(selfMsg);
 }
 
-std::ostream& operator<<(std::ostream& os, const struct GA::Service& service)
+std::ostream& operator<<(std::ostream& os, const struct GrayWolf::Service& service)
 {
      os << "{dataSize: " << service.dataSize;
      os << ", requestSize: " << service.requestSize;
@@ -354,7 +369,7 @@ std::ostream& operator<<(std::ostream& os, const struct GA::Service& service)
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const struct GA::FogNode& fogNode)
+std::ostream& operator<<(std::ostream& os, const struct GrayWolf::FogNode& fogNode)
 {
      os << "{hostName: " << fogNode.host->getFullName();
      os << ", ipAddress: " << fogNode.ipAddress;
@@ -365,22 +380,21 @@ std::ostream& operator<<(std::ostream& os, const struct GA::FogNode& fogNode)
      os << ", powerProcessing: " << fogNode.powerProcessing << "}";
     return os;
 }
-
-//std::ostream& operator<<(std::ostream& os, const GA::Chromosome& chromosome)
-std::ostream& operator<<(std::ostream& os, const std::vector <int>& chromosomeOrWolf)
+/*
+std::ostream& operator<<(std::ostream& os, const GrayWolf::Wolf& wolf)
 {
     os << "{";
-    for(int i=0; i<chromosomeOrWolf.size(); i++){
-        os << "chromosome/wolf[" << i << "]: " << chromosomeOrWolf.at(i);
-        if(i!=chromosomeOrWolf.size()-1)
+    for(int i=0; i<wolf.size(); i++){
+        os << "wolf[" << i << "]: " << wolf.at(i);
+        if(i!=wolf.size()-1)
             os << ", ";
     }
     os << "}";
 }
-
-std::ostream& operator<<(std::ostream& os, const struct GA::Individual& individual)
+*/
+std::ostream& operator<<(std::ostream& os, const struct GrayWolf::Individual& individual)
 {
-     os << "{chromosome: " << individual.chromosome;
+     os << "{wolf: " << individual.wolf;
      os << ", fitnessValue: " << individual.valueFitnessCostFunctions.fitnessValue;
      os << ", serviceTimeValue: " << individual.valueFitnessCostFunctions.serviceTimeValue;
      os << ", serviceCostValue: " << individual.valueFitnessCostFunctions.serviceCostValue;

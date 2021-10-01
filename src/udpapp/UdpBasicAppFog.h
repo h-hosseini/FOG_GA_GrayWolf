@@ -26,6 +26,7 @@
 #include "inet/transportlayer/contract/udp/UdpSocket.h"
 //Extra Begin
 #include "src/ga/GA.h"
+#include "src/grayWolf/GrayWolf.h"
 //Extra End
 
 namespace fogfn {
@@ -58,7 +59,10 @@ class INET_API UdpBasicAppFog : public ClockUserModuleMixin<ApplicationBase>, pu
     int numReceived = 0;
 
     //Extra Begin
+    std::string optimizerType;
     GA *gaOptimizer;
+    GrayWolf *grayWolfOptimizer;
+
     //Fog node info
     union ChunkDataUnion {
         double doubleValue;

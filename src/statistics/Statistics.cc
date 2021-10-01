@@ -47,19 +47,42 @@ void Statistics::collectGaParameters(double serviceTimeValue, double serviceCost
     //Time statistics
     FILE *serviceTimeValueFp, *serviceCostValueFp, *energyConsumptionValueFp, *fitnessValueFp;
 
-    fitnessValueFp = fopen("1_fitnessValue.txt", "a");
+    fitnessValueFp = fopen("1_fitnessValueGa.txt", "a");
     fprintf(fitnessValueFp, "%f\n", fitnessValue);
     fclose(fitnessValueFp);
 
-    serviceTimeValueFp = fopen("2_serviceTimeValue.txt", "a");
+    serviceTimeValueFp = fopen("2_serviceTimeValueGa.txt", "a");
     fprintf(serviceTimeValueFp, "%f\n", serviceTimeValue);
     fclose(serviceTimeValueFp);
 
-    serviceCostValueFp = fopen("3_serviceCostValue.txt", "a");
+    serviceCostValueFp = fopen("3_serviceCostValueGa.txt", "a");
     fprintf(serviceCostValueFp, "%f\n", serviceCostValue);
     fclose(serviceCostValueFp);
 
-    energyConsumptionValueFp = fopen("4_energyConsumptionValue.txt", "a");
+    energyConsumptionValueFp = fopen("4_energyConsumptionValueGa.txt", "a");
+    fprintf(energyConsumptionValueFp, "%f\n", energyConsumptionValue);
+    fclose(energyConsumptionValueFp);
+
+}
+
+void Statistics::collectGrayWolfParameters(double serviceTimeValue, double serviceCostValue, double energyConsumptionValue, double fitnessValue)
+{
+    //Time statistics
+    FILE *serviceTimeValueFp, *serviceCostValueFp, *energyConsumptionValueFp, *fitnessValueFp;
+
+    fitnessValueFp = fopen("5_fitnessValueGrayWolf.txt", "a");
+    fprintf(fitnessValueFp, "%f\n", fitnessValue);
+    fclose(fitnessValueFp);
+
+    serviceTimeValueFp = fopen("6_serviceTimeValueGrayWolf.txt", "a");
+    fprintf(serviceTimeValueFp, "%f\n", serviceTimeValue);
+    fclose(serviceTimeValueFp);
+
+    serviceCostValueFp = fopen("7_serviceCostValueGrayWolf.txt", "a");
+    fprintf(serviceCostValueFp, "%f\n", serviceCostValue);
+    fclose(serviceCostValueFp);
+
+    energyConsumptionValueFp = fopen("8_energyConsumptionValueGrayWolf.txt", "a");
     fprintf(energyConsumptionValueFp, "%f\n", energyConsumptionValue);
     fclose(energyConsumptionValueFp);
 

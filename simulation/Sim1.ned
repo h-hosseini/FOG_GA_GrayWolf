@@ -23,12 +23,14 @@ import inet.physicallayer.wireless.ieee80211.bitlevel.Ieee80211LayeredScalarRadi
 import inet.visualizer.contract.IIntegratedVisualizer;
 
 import fogfn.src.ga.GA;
+import fogfn.src.grayWolf.GrayWolf;
 import fogfn.src.statistics.Statistics;
 
 network Sim1
 {
     parameters:
         int numberOfFogNodes;
+        string optimizerType = default("Genetic");
     submodules:
         visualizer: <default(firstAvailableOrEmpty("IntegratedCanvasVisualizer"))> like IIntegratedVisualizer if typename != "" {
             parameters:
@@ -36,17 +38,20 @@ network Sim1
         }
         configurator: Ipv4NetworkConfigurator {
             parameters:
-                @display("p=219,39;is=s");
+                @display("p=201,39;is=s");
         }
         radioMedium: Ieee80211LayeredScalarRadioMedium {
             parameters:
-                @display("p=139,39;is=s");
+                @display("p=119,39;is=s");
         }
-        gaOptimizer: GA {
-            @display("p=299,39;is=s");
+        gaOptimizer: GA if optimizerType == "Genetic"{
+            @display("p=276,39;is=s");
+        }
+        grayWolfOptimizer: GrayWolf if optimizerType == "GrayWolf"{
+            @display("p=373,39;is=s");
         }
         statistics: Statistics {
-            @display("p=374,39;is=s");
+            @display("p=459,39;is=s");
         }
         admin: AdhocHost {
             parameters:

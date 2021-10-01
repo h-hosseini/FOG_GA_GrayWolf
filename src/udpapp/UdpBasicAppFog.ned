@@ -39,7 +39,10 @@ import inet.applications.contract.IApp;
 simple UdpBasicAppFog like IApp
 {
     parameters:
+        //Extra Begin
         @class(fogfn::UdpBasicAppFog);
+        string optimizerType = default("Genetic");
+        //Extra End
         string interfaceTableModule;   // The path to the InterfaceTable module
         string clockModule = default(""); // relative path of a module that implements IClock; optional
         int localPort = default(-1);  // local port (-1: use ephemeral port)

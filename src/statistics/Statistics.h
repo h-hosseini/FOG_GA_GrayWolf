@@ -40,6 +40,7 @@ protected:
 public:
 
     void collectGaParameters(double serviceTimeValue, double serviceCostValue, double energyConsumptionValue, double fitnessValue);
+    void collectGrayWolfParameters(double serviceTimeValue, double serviceCostValue, double energyConsumptionValue, double fitnessValue);
 
 };
 

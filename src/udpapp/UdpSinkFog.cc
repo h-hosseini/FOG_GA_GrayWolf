@@ -54,7 +54,15 @@ void UdpSinkFog::initialize(int stage)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
         selfMsg = new cMessage("UDPSinkTimer");
         //Extra Begin
-        gaOptimizer = check_and_cast<GA *>(getSimulation()->getSystemModule()->getSubmodule("gaOptimizer"));
+        optimizerType = par("optimizerType").stringValue();
+        WATCH(optimizerType);
+        if(optimizerType == "Genetic"){
+            grayWolfOptimizer = nullptr;
+            gaOptimizer = check_and_cast<GA *>(getSimulation()->getSystemModule()->getSubmodule("gaOptimizer"));
+        }else if(optimizerType == "GrayWolf"){
+            gaOptimizer = nullptr;
+            grayWolfOptimizer = check_and_cast<GrayWolf *>(getSimulation()->getSystemModule()->getSubmodule("grayWolfOptimizer"));
+        }
         //Extra End
     }
 }
@@ -181,8 +189,11 @@ void UdpSinkFog::processPacket(Packet *pk)
     //auto ports = pk->getTag<L4PortInd>();
     L3Address srcAddr = l3Addresses->getSrcAddress();
     //L3Address destAddr = l3Addresses->getDestAddress();
-    gaOptimizer->registFogServiceInfo(srcAddr, processingCapacity.doubleValue, linkCapacity.doubleValue, powerIdle.doubleValue, powerTransmission.doubleValue, powerProcessing.doubleValue, dataSize.doubleValue, requestSize.doubleValue, responseSize.doubleValue, serviceDeadline.doubleValue);
-
+    if(optimizerType == "Genetic"){
+        gaOptimizer->registFogServiceInfo(srcAddr, processingCapacity.doubleValue, linkCapacity.doubleValue, powerIdle.doubleValue, powerTransmission.doubleValue, powerProcessing.doubleValue, dataSize.doubleValue, requestSize.doubleValue, responseSize.doubleValue, serviceDeadline.doubleValue);
+    }else if(optimizerType == "GrayWolf"){
+        grayWolfOptimizer->registFogServiceInfo(srcAddr, processingCapacity.doubleValue, linkCapacity.doubleValue, powerIdle.doubleValue, powerTransmission.doubleValue, powerProcessing.doubleValue, dataSize.doubleValue, requestSize.doubleValue, responseSize.doubleValue, serviceDeadline.doubleValue);
+    }
     EV_INFO << "UdpSinkFog::processPacket(Packet): Received packet from " << srcAddr << ", processingCapacity = " << processingCapacity.doubleValue << ", linkCapacity = " << linkCapacity.doubleValue << ", powerIdle = " << powerIdle.doubleValue << ", powerTransmission = " << powerTransmission.doubleValue << ", dataSize = " << dataSize.doubleValue << ", requestSize = " << requestSize.doubleValue << ", responseSize = " << responseSize.doubleValue << ", serviceDeadline = " << serviceDeadline.doubleValue << endl;
 
     delete pk;
