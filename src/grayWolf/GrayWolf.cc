@@ -286,7 +286,7 @@ void GrayWolf::updateWolves(double a){
     }
 }
 */
-
+/*
 void GrayWolf::updateWolves(double a){
 
     Wolf alpha = population.at(0).wolf;
@@ -294,6 +294,48 @@ void GrayWolf::updateWolves(double a){
     Wolf delta = population.at(2).wolf;
 
     for(int i=0; i<numberOfPopulation; i++){
+        for(int j=0; j<wolfSize; j++){
+            // Alpha
+            double r1 = uniform(0, 1);
+            double r2 = uniform(0, 1);
+            double A1 = 2.0 * a * r1 - a;
+            double C1 = 2.0 * r2;
+            double dAlpha = std::abs(C1 * alpha.at(j) - population.at(i).wolf.at(j));
+            double X1 = alpha.at(j) - A1 * dAlpha;
+            // Beta
+            r1 = uniform(0, 1);
+            r2 = uniform(0, 1);
+            A1 = 2.0 * a * r1 - a;
+            C1 = 2.0 * r2;
+            double dBeta = std::abs(C1 * beta.at(j) - population.at(i).wolf.at(j));
+            double X2 = beta.at(j) - A1 * dBeta;
+            // Delta
+            r1 = uniform(0, 1);
+            r2 = uniform(0, 1);
+            A1 = 2.0 * a * r1 - a;
+            C1 = 2.0 * r2;
+            double dDelta = std::abs(C1 * delta.at(j) - population.at(i).wolf.at(j));
+            double X3 = delta.at(j) - A1 * dDelta;
+
+            int x1 = std::abs((int) X1) % numberOfFogNodes;
+            int x2 = std::abs((int) X2) % numberOfFogNodes;
+            int x3 = std::abs((int) X3) % numberOfFogNodes;
+            population.at(i).wolf.at(j) = crossOver(x1, x2, x3);
+            EV << "X1, X2, X3: " << X1 << ", " << X2 << ", " << X3 << ", " << " and x1, x2, x3: " << x1 << ", " << x2 << ", " << x3 << " and crossover:" << population.at(i).wolf.at(j) << endl;
+        }
+        population.at(i).valueFitnessCostFunctions = fitnessFunction(population.at(i).wolf);
+        EV << "Updated Wolf#" << i << ": " << population.at(i) << endl;
+    }
+}
+*/
+
+void GrayWolf::updateWolves(double a){
+
+    Wolf alpha = population.at(0).wolf;
+    Wolf beta = population.at(1).wolf;
+    Wolf delta = population.at(2).wolf;
+
+    for(int i=3; i<numberOfPopulation; i++){
         for(int j=0; j<wolfSize; j++){
             // Alpha
             double r1 = uniform(0, 1);
